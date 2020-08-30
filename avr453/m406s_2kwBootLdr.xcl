@@ -1,0 +1,272 @@
+/*                      - m406s_2kwBootLdr.xcl -
+ *
+ *   XLINK bootloader command file for the ICCAVR C-compiler using the -v3, -ms options.
+ *   Segments are defined for m406 with 40kbyte flash, and 4kbyte boot sector.
+ *   If smaller bootsector is desired, this has to be edited.
+ *
+ *   Usage: xlink your_file(s) -f m406s_2kwBootLdr
+ *
+ *   File version: $Revision: 997 $
+ */
+
+/*
+ * Modify the lines below to alter the size of the RSTACK, CSTACK and HEAP
+ * segments. These need to be fine tuned to suit your specific application.
+ */
+-D_..X_CSTACK_SIZE=20 /* 32 bytes for auto variables and register save. */
+-D_..X_RSTACK_SIZE=20 /* 32 bytes for return addresses, equivalent to */
+                      /* 16 levels of calls, including interrupts. */
+-D_..X_HEAP_SIZE=20   /* 32 bytes of heap. */
+
+/*
+ *   The following segments are used by the compiler:
+ *
+ *   Program address space read only segments (internal Flash)
+ *   =========================================================
+ *   segment     address range  max size (dec)
+ *   -------     -------------  --------------
+ *   INTVEC          0 -    1F   32 bytes
+ *   TINY_F          0 -    FF  256 bytes
+ *   SWITCH          0 -  FFFF   64 Kbytes
+ *   DIFUNCT         0 -  FFFF   64 Kbytes
+ *   NEAR_F          0 -  FFFF   64 Kbytes
+ *   CODE            0 - 1FFFF  128 Kbytes
+ *   FAR_F           0 - 1FFFF  128 Kbytes
+ *   INITTAB         0 - 1FFFF  128 Kbytes
+ *   HUGE_F          0 - 1FFFF  128 Kbytes
+ *   TINY_ID         0 - 1FFFF  128 Kbytes
+ *   NEAR_ID         0 - 1FFFF  128 Kbytes
+ *
+ *   Data address space read/write segments
+ *   ==============================================================
+ *   segment     address range  max size (dec)
+ *   -------     -------------  --------------
+ *   TINY_Z         60 -    FF  160 bytes
+ *   TINY_N         60 -    FF  160 bytes
+ *   TINY_I         60 -    FF  160 bytes
+ *   CSTACK         60 -  FFFF   64 kbytes
+ *   HEAP           60 -  FFFF   64 kbytes
+ *   RSTACK         60 -  FFFF   64 kbytes
+ *   NEAR_Z         60 -  FFFF   64 kbytes
+ *   NEAR_I         60 -  FFFF   64 kbytes
+ *   NEAR_N         60 -  FFFF   64 kbytes
+ *   NEAR_C         60 -  FFFF   64 kbytes
+ *
+ *  String literals and constant objects are placed in the NEAR_C segment,
+ *  unless the -y command line option is gven. If it was given string literals
+ *  and constant objects will be placed in the NEAR_ID segment which is
+ *  initialized by cstartup.
+ *
+ *  The address ranges given in the table above specifies the "hard" limits
+ *  where a given segment may be placed, e.g. it is not allowed to place the
+ *  TINY_F segment anywhere outside of the given range 0-FF.
+ */
+
+/* Define CPU */
+-ca90
+
+/*************************************************************/
+/* Segments in program address space (internal Flash memory) */
+/*************************************************************/
+
+/*
+ * Reset and interrupt vectors.
+ *
+ * The reset vector and interrupt vectors must be placed at address 0
+ * and forwards. This definition allows for up to 23 interrupt vectors
+ * and the reset vector.
+ */
+-Z(CODE)INTVEC=9000-9059
+
+/*
+ * __tinyflash declared objects.
+ *
+ * Constant objects that have been declared with the __tinyflash keyword
+ * will be placed in this segment. The code generated is almost the same
+ * as for objects declared with __flash, the exception is that a __tinyflash
+ * pointer is one byte instead of two.
+ */
+// -Z(CODE)TINY_F=0-FF
+
+/*
+ * Compiler generated segments
+ *
+ * There are currently three compiler generated segments. These are used
+ * to store information that is vital to the operation of the program.
+ *
+ * The first segment is the SWITCH segment which contains data statements
+ * used in the switch library routines. These tables are encoded in so a
+ * way as to use as little space as possible.
+ *
+ * The second segment, INITTAB contains the segment initialization
+ * desctiption blocks that are used by the __segment_init function that
+ * is called by cstartup. This table consist of a number of
+ * SegmentInitBlock_Type objects. This type is declared in the segment_init.h
+ * file located in the AVR\SRC\LIB directory.
+ *
+ * Tha last segment is only used when a source file has been compiled
+ * in EC++ mode and the file contained global objects (class instances).
+ * The segment will then contain a number of function pointers that
+ * point to constructor code that should be performed for each object.
+ */
+-Z(CODE)SWITCH,DIFUNCT=9000-9FFF
+
+/*
+ * __flash declared objects.
+ *
+ * Constant objects that have been declared with the __flash keyword will
+ * be placed in this segment.
+ */
+-Z(CODE)NEAR_F=9000-9FFF
+
+/*
+ * Program code, __nearfunc declared functions
+ *
+ * Code that comes from __nearfunc declared functions is placed in the CODE
+ * segment. This segment must be placed in the first 128 Kbytes of flash
+ * memory. The reason for this is that function pointers to __nearfunc
+ * functions are 2 bytes large. All function pointers are word pointers.
+ */
+-Z(CODE)CODE=9000-9FFF
+
+/*
+ * __farflash declared objects.
+ *
+ * Constant objects that have been declared with the __farflash keyword will
+ * be placed in this segment. The objects are limited to 32 Kbytes in size
+ * and by using the FARCODE segment type xlink guarantees that no object in
+ * the segment spans over a 64K boundary.
+ */
+-Z(FARCODE)FAR_F=9000-9FFF
+
+/*
+ * __hugeflash declared objects.
+ *
+ * Constant objects that have been declared with the __hugeflash keyword will
+ * be placed in this segment.
+ */
+-Z(CODE)HUGE_F,INITTAB=9000-9FFF
+
+/*
+ * Initialization data for the TINY_I and NEAR_I segments
+ *
+ * If any non-zero initialized variables exist in the application the
+ * corresponding _ID segment will contain the initial values of those
+ * variables. The cstartup module will initialize the _I segments at
+ * system start up by calling the __segment_init function.
+ */
+/* Initialization data for the TINY_I and NEAR_I segments */
+/*-Z(CODE)TINY_ID,NEAR_ID=0-9FFF*/
+-Z(CODE)NEAR_ID=9000-9FFF
+-Z(CODE)CHECKSUM#9FFF
+
+/***************************************************************************/
+/* Segments in data address space (internal or external SRAM/EPROM/EEPROM) */
+/***************************************************************************/
+
+/*
+ * __tiny declared objects
+ *
+ * These three segments contain objects that haven been declared with the
+ * __tiny keyword. After cstartup has run the _I segment has been initialized
+ * with the values in the _ID segment and the _Z segment has been cleared so
+ * that it contains all zeros.
+ */
+/* -Z(DATA)TINY_I,TINY_Z,TINY_N=60-FF */
+
+/*
+ * Data stack
+ *
+ * The data stack is used for auto variables, function parameters and
+ * temporary storage. It is therefore important that the size of the data
+ * stack is large enough. However, a too large stack will waste valuable
+ * RAM space. To determine approximately how much data stack that is needed
+ * for an application, perform a trial link with the list file option 'o'
+ * present, e.g. -xmos. This will tell xlink to generate a stack usage tree
+ * in the map file. The values in the map file could then be used as an
+ * approximation. Please note that the given value does not include stack
+ * used by interrupts and assembler functions written by the end-user. It is
+ * therefore neccesary to add a small safety margin to the value given by
+ * xlink.
+ */
+-Z(DATA)CSTACK+_..X_CSTACK_SIZE=100-8FF
+
+/*
+ * The malloc HEAP segment
+ *
+ * If the application uses malloc or calloc the memory is allocated from this
+ * segment. It is therefore important that the segment is placed so that a
+ * default pointer can point to it. Since this linker file assumes that the
+ * small memory model is used the heap must be placed in the range 0 ... FFFF.
+ *
+ * The library technology that is used is such that if no calls are made to
+ * malloc, calloc or realloc, this segment will not be included. It is
+ * therefore safe to include it in all your link files.
+ */
+-Z(DATA)HEAP+_..X_HEAP_SIZE=100-08FF
+
+/*
+ * Return address stack
+ *
+ * The return address stack is used to store the return address when a CALL,
+ * RCALL, ICALL or EICALL instruction is executed. Each call will use three
+ * bytes of return address stack. An interrupt will also place a return
+ * address on this stack. Use the same technique as for the data stack to
+ * determine the size of the return address stack. Note however that if the
+ * cross-call optimization has been used (-z9 and not --no_cross_call) the
+ * value given by xlink can be off by as much as a factor of five depending on
+ * how many times the cross-call optimizer has been run (--cross_call_passes).
+ */
+-Z(DATA)RSTACK+_..X_RSTACK_SIZE=100-08FF
+
+/*
+ * __near declared objects
+ *
+ * These three segments contain objects that haven been declared with the
+ * __near keyword. After cstartup has run the _I segment has been initialized
+ * with the values in the _ID segment and the _Z segment has been cleared so
+ * that it contains all zeros.
+ */
+-Z(DATA)NEAR_I,NEAR_Z,NEAR_N=100-08FF
+
+/*
+ * __near declared constant objects
+ *
+ * This segment contains data that should be placed in an EXTERNAL rom.
+ * The data stored in this segment include constant __near declared objects
+ * as well as string literals and aggrgate initializers. The need for a _C
+ * segment can be eliminated by using the -y and --initializers_in_flash
+ * command line options. The use of these options will increase the size of
+ * the _I and _F segments.
+ */
+-Z(CONST)NEAR_C=100-08FF
+
+/*
+ * Select reduced "printf" support to reduce library size.
+ * See configuration section in manual concerning printf/sprintf.
+ */
+
+/*Dlib*/
+-e_Printf_1=_Printf
+
+/*Clib*/
+-e_small_write=_formatted_write
+-e_small_write_P=_formatted_write_P
+
+/*
+ * Disable floating-point support in "scanf" to reduce library size.
+ * See configuration section in manual concerning scanf/sscanf */
+
+/*Dlib*/
+-e_Scanf_1=_Scanf
+
+/*Clib*/
+-e_medium_read=_formatted_read
+-e_medium_read_P=_formatted_read_P
+
+/* Suppress one warning which is not relevant for this processor */
+-w29
+
+/* Code will now reside in file aout.a90 or aout.d90, unless -o is specified */
+/* .d90 is the default if debug system is linked (option -r) */
+/* .a90 is the default without debugging. Default format is -Fmotorola */
