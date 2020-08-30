@@ -23,7 +23,7 @@ component datesheet
 ![ATmega406-typ_circuit.jpg](ATmega406-typ_circuit.jpg)  
 
 JTAG pin  
-[ATmega406_JTAG_pin.JPG](ATmega406_JTAG_pin.JPG)  
+![ATmega406_JTAG_pin.JPG](ATmega406_JTAG_pin.JPG)  
 
 Parallel ISP  
 ![Parallel_pin1.JPG](Parallel_pin1.JPG)    
